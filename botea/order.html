@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Order Trà Sữa – Bơ Tea</title>
+
+    <style>
+        /* ==========================
+        GLOBAL
+        ========================== */
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f8fdf8; /* your green background */
+            padding: 30px;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2b8f47; /* green theme */
+            text-shadow: 1px 1px 2px #aee5b2;
+            margin-bottom: 25px;
+            font-size: 32px;
+        }
+
+        /* ==========================
+        TABLE
+        ========================== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid #8ccc8a; /* your green border */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        th {
+            background: #8ccc8a;
+            color: white;
+            padding: 14px;
+            font-size: 18px;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e8f7e8;
+        }
+
+        tr:hover td {
+            background: #f1fbf1;
+        }
+
+        /* ==========================
+        CATEGORY HEADER
+        ========================== */
+        .category-row {
+            background: #e3f8e3; /* soft green */
+            font-weight: bold;
+            font-size: 18px;
+            padding: 10px;
+            color: #2b8f47;
+            text-transform: uppercase;
+            border-left: 6px solid #8ccc8a;
+        }
+
+        /* ==========================
+        QUANTITY INPUTS
+        ========================== */
+        .qty-box {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .qty-btn {
+            background: #8ccc8a;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .qty-btn:hover {
+            background: #6fb86d;
+        }
+
+        .order-input {
+            width: 70px; /* your style applied */
+            text-align: center;
+            padding: 5px;
+            border: 1px solid #8ccc8a;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+
+        .item-name {
+            font-weight: 600; /* your style */
+        }
+
+        /* ==========================
+        SUMMARY BOX
+        ========================== */
+        .summary-box {
+            background: white;
+            width: 340px;
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #8ccc8a;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+            float: right;
+            margin-top: 30px;
+        }
+
+        .summary-box h3 {
+            color: #2b8f47;
+            margin-bottom: 15px;
+            font-size: 22px;
+        }
+
+        .total-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 17px;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #2b8f47;
+            font-size: 19px;
+        }
+
+        /* ==========================
+        BUTTON ORDER
+        ========================== */
+        .order-btn {
+            background: linear-gradient(45deg, #2b8f47, #59c66f);
+            color: white;
+            padding: 15px 25px;
+            border: none;
+            border-radius: 50px;
+            margin-top: 20px;
+            font-size: 20px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(43,143,71,0.3);
+        }
+
+        .order-btn:hover {
+            transform: scale(1.05);
+            transition: 0.2s;
+            box-shadow: 0 6px 18px rgba(43,143,71,0.4);
+        }
+
+        /* ==========================
+        MENU BOX (your style integrated)
+        ========================== */
+        .menu-box {
+            background: white;
+            border: 2px solid #8ccc8a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .menu-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #2b8f47;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            border-bottom: 2px solid #8ccc8a;
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+</head>
+
+<body>
+
+    <h1>🍹 Đặt Trà Sữa Ngay!</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Món</th>
+                <th>Giá</th>
+                <th>Số lượng</th>
+                <th>Tổng</th>
+            </tr>
+        </thead>
+
+        <tbody id="menuBody">
+
+            <!-- Dữ liệu menu sẽ được JS render tự động -->
+
+        </tbody>
+    </table>
+
+    <div class="summary-box">
+        <h3>Hóa Đơn</h3>
+        <div class="total-line"><span>Tổng tiền:</span> <span id="grandTotal">0K</span></div>
+        <div class="total-line"><span>Giảm giá:</span> <span id="discount">0K</span></div>
+        <div class="total-line"><span>Phí giao hàng:</span> <span id="delivery">0K</span></div>
+        <hr>
+        <div class="total-line highlight"><span>Thanh toán:</span> <span id="finalPrice">0K</span></div>
+
+        <button class="order-btn" onclick="showOrderSuccess()" >Đặt hàng ngay!!!</button>
+    </div>
+
+    <script>
+        const menuData = [
+            { category: "Trà Sữa", items: [
+                { name: "TS Truyền Thống", price: 18000 },
+                { name: "TS Trân Châu Đường Đen", price: 20000 },
+                { name: "TS Trân Châu Đường Đen Kem Trứng", price: 25000 },
+                { name: "TS Socola", price: 20000 },
+                { name: "TS Bạc Hà", price: 20000 },
+            ]},
+            { category: "Trà", items: [
+                { name: "Trà Chanh", price: 8000 },
+                { name: "Trà Quất", price: 8000 },
+                { name: "Trà Đào", price: 15000 },
+                { name: "Trà Quất Lắc Sữa", price: 20000 },
+            ]},
+            { category: "Đá Xay", items: [
+                { name: "Matcha Đá Xay", price: 25000 },
+                { name: "Socola Đá Xay", price: 25000 },
+                { name: "Việt Quất Đá Xay", price: 25000 },
+            ]},
+            { category: "Topping", items: [
+                { name: "Trân Châu Đen", price: 5000 },
+                { name: "Pudding", price: 5000 },
+                { name: "Thạch", price: 5000 },
+            ]},
+            { category: "Đồ Ăn Vặt", items: [
+                { name: "Xúc Xích", price: 10000 },
+                { name: "Khoai Tây Lắc Phô Mai", price: 25000 },
+                { name: "Hotdog", price: 15000 },
+            ]}
+        ];
+
+        // Render menu
+        const tbody = document.getElementById("menuBody");
+
+        menuData.forEach(group => {
+            tbody.innerHTML += `<tr><td colspan="4" class="category-row">${group.category}</td></tr>`;
+
+            group.items.forEach(item => {
+                tbody.innerHTML += `
+                    <tr data-price="${item.price}">
+                        <td>${item.name}</td>
+                        <td>${Math.round(item.price / 1000)}K</td>
+                        <td>
+                            <div class="qty-box">
+                                <button class="qty-btn" onclick="changeQty(this,-1)">-</button>
+                                <input type="number" class="order-input" value="0" min="0">
+                                <button class="qty-btn" onclick="changeQty(this,1)">+</button>
+                            </div>
+                        </td>
+                        <td class="total-cell">0K</td>
+                    </tr>
+                `;
+            });
+        });
+
+        function formatK(v) { return Math.round(v / 1000) + "K"; }
+
+        function updateTotals() {
+            let grandTotal = 0;
+
+            document.querySelectorAll("#menuBody tr[data-price]").forEach(row => {
+                const price = parseInt(row.dataset.price);
+                const qty = parseInt(row.querySelector(".order-input").value) || 0;
+                const total = price * qty;
+
+                row.querySelector(".total-cell").textContent = formatK(total);
+                grandTotal += total;
+            });
+
+            const discount = grandTotal >= 100000 ? grandTotal * 0.06 : 0;
+            const delivery = grandTotal >= 150000 ? 0 : 33000;
+            const finalPrice = grandTotal - discount + delivery;
+
+            document.getElementById("grandTotal").textContent = formatK(grandTotal);
+            document.getElementById("discount").textContent = formatK(discount);
+            document.getElementById("delivery").textContent = formatK(delivery);
+            document.getElementById("finalPrice").textContent = formatK(finalPrice);
+        }
+
+        // quantity +/- buttons
+        function changeQty(btn, delta) {
+            const input = btn.parentElement.querySelector(".order-input");
+            let value = parseInt(input.value) + delta;
+            if (value < 0) value = 0;
+            input.value = value;
+            updateTotals();
+        }
+
+        document.querySelectorAll(".order-input").forEach(input =>
+            input.addEventListener("input", updateTotals)
+        );
+
+        function showOrderSuccess() {
+            const total = document.getElementById("finalPrice").textContent;
+
+            Swal.fire({
+                title: "🎉 Đặt hàng thành công!",
+                html: `
+                    <b>Tổng đơn của bạn:</b> <span style="color:#2b8f47;font-size:20px;">${total}</span><br><br>
+                    Cảm ơn bạn đã ủng hộ ❤️
+                `,
+                icon: "success",
+                confirmButtonText: "Quay lại trang chủ",
+                confirmButtonColor: "#28a745",
+                background: "#ffffffd9",
+                color: "#2b2b2b",
+                backdrop: `
+                    rgba(0, 0, 0, 0.4)
+                    url("https://i.gifer.com/7efs.gif")
+                    center top
+                    no-repeat
+                `
+            }).then(() => {
+                window.location.href = "index.html"; // Return to home page
+            });
+        }
+    </script>
+
+</body>
+</html>
