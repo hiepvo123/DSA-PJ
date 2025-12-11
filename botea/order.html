@@ -188,11 +188,26 @@
 
     <h1>🍹 Đặt Trà Sữa Ngay!</h1>
 
+    <div style="text-align:center; margin-bottom:20px;">
+        <input 
+            id="searchInput" 
+            type="text" 
+            placeholder="🔍 Tìm món theo tên..." 
+            style="padding:10px; width:50%; border:2px solid #8ccc8a; border-radius:8px;">
+    </div>
+
+
     <table>
         <thead>
             <tr>
-                <th>Món</th>
-                <th>Giá</th>
+                <th>Món
+                    <span id="sortNameUp" style="cursor:pointer;">▲</span>
+                    <span id="sortNameDown" style="cursor:pointer;">▼</span>
+                </th>
+                <th>Giá
+                    <span id="sortPriceUp" style="cursor:pointer;">▲</span>
+                    <span id="sortPriceDown" style="cursor:pointer;">▼</span>
+                </th>
                 <th>Số lượng</th>
                 <th>Tổng</th>
             </tr>
@@ -216,37 +231,22 @@
         <button class="order-btn" onclick="showOrderSuccess()" >Đặt hàng ngay!!!</button>
     </div>
 
+    <script src="data.js"></script>
+    <script src="algo.js"></script>
+
+
     <script>
-        const menuData = [
-            { category: "Trà Sữa", items: [
-                { name: "TS Truyền Thống", price: 18000 },
-                { name: "TS Trân Châu Đường Đen", price: 20000 },
-                { name: "TS Trân Châu Đường Đen Kem Trứng", price: 25000 },
-                { name: "TS Socola", price: 20000 },
-                { name: "TS Bạc Hà", price: 20000 },
-            ]},
-            { category: "Trà", items: [
-                { name: "Trà Chanh", price: 8000 },
-                { name: "Trà Quất", price: 8000 },
-                { name: "Trà Đào", price: 15000 },
-                { name: "Trà Quất Lắc Sữa", price: 20000 },
-            ]},
-            { category: "Đá Xay", items: [
-                { name: "Matcha Đá Xay", price: 25000 },
-                { name: "Socola Đá Xay", price: 25000 },
-                { name: "Việt Quất Đá Xay", price: 25000 },
-            ]},
-            { category: "Topping", items: [
-                { name: "Trân Châu Đen", price: 5000 },
-                { name: "Pudding", price: 5000 },
-                { name: "Thạch", price: 5000 },
-            ]},
-            { category: "Đồ Ăn Vặt", items: [
-                { name: "Xúc Xích", price: 10000 },
-                { name: "Khoai Tây Lắc Phô Mai", price: 25000 },
-                { name: "Hotdog", price: 15000 },
-            ]}
-        ];
+    let menuDataFlat = [];
+
+    menuData.forEach(group => {
+        group.items.forEach(item => {
+            menuDataFlat.push({
+                name: item.name,
+                price: item.price,
+                category: group.category
+            });
+        });
+    });
 
         // Render menu
         const tbody = document.getElementById("menuBody");
@@ -256,7 +256,7 @@
 
             group.items.forEach(item => {
                 tbody.innerHTML += `
-                    <tr data-price="${item.price}">
+                    <tr data-price="${item.price}" data-name="${item.name}" data-category="${group.category}">
                         <td>${item.name}</td>
                         <td>${Math.round(item.price / 1000)}K</td>
                         <td>
@@ -271,6 +271,78 @@
                 `;
             });
         });
+
+
+    // ==== SORT TRONG TỪNG CATEGORY ====
+
+    function getItemsInCategory(cat) {
+        return [...document.querySelectorAll(`tr[data-category="${cat}"]`)];
+    }
+
+
+    function sortOneGroup(category, sortedItems) {
+    const rows = [...document.querySelectorAll(`tr[data-category="${category}"]`)];
+    const rowMap = {};
+    rows.forEach(r => rowMap[r.dataset.name] = r);
+
+    // tìm header
+    const header = [...document.querySelectorAll(".category-row")]
+        .find(h => h.textContent.trim() === category);
+
+    // lấy đúng vị trí đứng sau header
+    let insertPos = header.nextElementSibling;
+
+    // BƯỚC 1: đưa tất cả items về ngay sau header (reset vị trí)
+    rows.forEach(r => {
+        tbody.insertBefore(r, insertPos);
+        insertPos = r.nextElementSibling;
+    });
+
+    // BƯỚC 2: chèn lại theo thứ tự đã sort
+    insertPos = header.nextElementSibling;
+    sortedItems.forEach(item => {
+        const row = rowMap[item.name];
+        if (row) {
+            tbody.insertBefore(row, insertPos);
+            insertPos = row.nextElementSibling;
+        }
+    });
+}
+
+    function sortAllGroups(sortedList) {
+        const grouped = {};
+        sortedList.forEach(i => {
+        if (!grouped[i.category]) grouped[i.category] = [];
+            grouped[i.category].push(i);
+        });
+        Object.keys(grouped).forEach(cat => sortOneGroup(cat, grouped[cat]));
+    }
+
+
+    sortNameUp.onclick = () => sortAllGroups(quickSortByName([...menuDataFlat], "asc"));
+    sortNameDown.onclick = () => sortAllGroups(quickSortByName([...menuDataFlat], "desc"));
+    sortPriceUp.onclick = () => sortAllGroups(bubbleSort([...menuDataFlat], "asc"));
+    sortPriceDown.onclick = () => sortAllGroups(bubbleSort([...menuDataFlat], "desc"));
+
+    // ===== SEARCH KMP =====
+    searchInput.addEventListener("input", function () {
+        const keyword = this.value.trim().toLowerCase();
+        const rows = document.querySelectorAll("tr[data-name]");
+
+        if (keyword === "") {
+            rows.forEach(r => r.style.display = "");
+            return;
+        }
+
+        const results = KMPSearch(menuDataFlat, keyword);
+        const names = results.map(i => i.name);
+
+        rows.forEach(row => {
+            row.style.display = names.includes(row.dataset.name) ? "" : "none";
+        });
+    });
+
+
 
         function formatK(v) { return Math.round(v / 1000) + "K"; }
 
