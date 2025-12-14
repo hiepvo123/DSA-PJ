@@ -216,6 +216,17 @@
         <button class="order-btn" onclick="showOrderSuccess()" >Đặt hàng ngay!!!</button>
     </div>
 
+
+    <script src="data.js"></script>
+    <script src="algo.js"></script>
+
+    <script>
+        const undoStack = new Stack();
+        const redoStack = new Stack();
+        const cart = new CartLinkedList();
+    </script>
+
+
     <script>
         const menuData = [
             { category: "Trà Sữa", items: [
@@ -272,38 +283,162 @@
             });
         });
 
+
+    // ==== SORT TRONG TỪNG CATEGORY ====
+
+    function getItemsInCategory(cat) {
+        return [...document.querySelectorAll(`tr[data-category="${cat}"]`)];
+    }
+
+
+    function sortOneGroup(category, sortedItems) {
+    const rows = [...document.querySelectorAll(`tr[data-category="${category}"]`)];
+    const rowMap = {};
+    rows.forEach(r => rowMap[r.dataset.name] = r);
+
+    // tìm header
+    const header = [...document.querySelectorAll(".category-row")]
+        .find(h => h.textContent.trim() === category);
+
+    // lấy đúng vị trí đứng sau header
+    let insertPos = header.nextElementSibling;
+
+    // BƯỚC 1: đưa tất cả items về ngay sau header (reset vị trí)
+    rows.forEach(r => {
+        tbody.insertBefore(r, insertPos);
+        insertPos = r.nextElementSibling;
+    });
+
+    // BƯỚC 2: chèn lại theo thứ tự đã sort
+    insertPos = header.nextElementSibling;
+    sortedItems.forEach(item => {
+        const row = rowMap[item.name];
+        if (row) {
+            tbody.insertBefore(row, insertPos);
+            insertPos = row.nextElementSibling;
+        }
+    });
+}
+
+    function sortAllGroups(sortedList) {
+        const grouped = {};
+        sortedList.forEach(i => {
+        if (!grouped[i.category]) grouped[i.category] = [];
+            grouped[i.category].push(i);
+        });
+        Object.keys(grouped).forEach(cat => sortOneGroup(cat, grouped[cat]));
+    }
+
+
+    sortNameUp.onclick = () => sortAllGroups(quickSortByName([...menuDataFlat], "asc"));
+    sortNameDown.onclick = () => sortAllGroups(quickSortByName([...menuDataFlat], "desc"));
+    sortPriceUp.onclick = () => sortAllGroups(bubbleSort([...menuDataFlat], "asc"));
+    sortPriceDown.onclick = () => sortAllGroups(bubbleSort([...menuDataFlat], "desc"));
+
+    // ===== SEARCH KMP =====
+    searchInput.addEventListener("input", function () {
+        const keyword = this.value.trim().toLowerCase();
+        const rows = document.querySelectorAll("tr[data-name]");
+
+        if (keyword === "") {
+            rows.forEach(r => r.style.display = "");
+            return;
+        }
+
+        const results = KMPSearch(menuDataFlat, keyword);
+        const names = results.map(i => i.name);
+
+        rows.forEach(row => {
+            row.style.display = names.includes(row.dataset.name) ? "" : "none";
+        });
+    });
+
+        //==== thêm hàm Stack ====
+        function saveState() {
+            const state = [...document.querySelectorAll(".order-input")]
+            .map(i => i.value);
+            undoStack.push(state);
+            redoStack.clear();
+        }
+
+
+
         function formatK(v) { return Math.round(v / 1000) + "K"; }
 
         function updateTotals() {
-            let grandTotal = 0;
 
             document.querySelectorAll("#menuBody tr[data-price]").forEach(row => {
                 const price = parseInt(row.dataset.price);
                 const qty = parseInt(row.querySelector(".order-input").value) || 0;
                 const total = price * qty;
 
-                row.querySelector(".total-cell").textContent = formatK(total);
-                grandTotal += total;
+                row.querySelector(".total-cell").textContent = formatK(price * qty);
             });
 
-            const discount = grandTotal >= 100000 ? grandTotal * 0.06 : 0;
-            const delivery = grandTotal >= 150000 ? 0 : 33000;
-            const finalPrice = grandTotal - discount + delivery;
+            const grandTotal = cart.getTotal(); // ✅ LINKED LIST
 
             document.getElementById("grandTotal").textContent = formatK(grandTotal);
-            document.getElementById("discount").textContent = formatK(discount);
-            document.getElementById("delivery").textContent = formatK(delivery);
-            document.getElementById("finalPrice").textContent = formatK(finalPrice);
+            document.getElementById("discount").textContent = grandTotal >= 100000 ? "10K" : "0K";
+            document.getElementById("delivery").textContent = grandTotal > 0 ? "5K" : "0K";
+            document.getElementById("finalPrice").textContent = formatK(grandTotal - (grandTotal >= 100000 ? 10000 : 0) + (grandTotal > 0 ? 5000 : 0));
         }
 
         // quantity +/- buttons
         function changeQty(btn, delta) {
-            const input = btn.parentElement.querySelector(".order-input");
-            let value = parseInt(input.value) + delta;
-            if (value < 0) value = 0;
-            input.value = value;
+            saveState(); // ✅ STACK
+
+            const row = btn.closest("tr");
+            const input = row.querySelector(".order-input");
+
+            let val = parseInt(input.value) || 0;
+                val = Math.max(0, val + delta);
+                input.value = val;
+
+            const name = row.dataset.name;
+            const price = parseInt(row.dataset.price);
+
+            if (val > 0) {
+            cart.addOrUpdate({ name, price, qty: val }); // ✅ LINKED LIST
+            } else {
+            cart.remove(name); // ✅ LINKED LIST
+            }
             updateTotals();
         }
+
+        // func Rebuild cart (để Stack + Linked List đồng bộ)
+        function rebuildCartFromUI() {
+            cart.head = null;
+
+        document.querySelectorAll("#menuBody tr[data-price]").forEach(row => {
+        const qty = parseInt(row.querySelector(".order-input").value);
+        if (qty > 0) {
+        cart.addOrUpdate({
+        name: row.dataset.name,
+        price: parseInt(row.dataset.price),
+        qty
+        });
+        }
+         });
+        }
+
+        //in undo
+        function undo() {
+            if (undoStack.isEmpty()) return;
+
+            const current = [...document.querySelectorAll(".order-input")]
+                                        .map(i => i.value);
+
+            redoStack.push(current);
+            const prev = undoStack.pop();
+            document.querySelectorAll(".order-input")
+            .forEach((input, i) => input.value = prev[i]);
+
+            rebuildCartFromUI();
+            updateTotals();
+        }
+
+
+
 
         document.querySelectorAll(".order-input").forEach(input =>
             input.addEventListener("input", updateTotals)
